@@ -1,50 +1,77 @@
-# Architecture Documentation
+# Multi-Cloud Architecture
 
-## Independent Multi-Cloud Static Website Architecture
+## Logical Architecture
+The architecture is designed to eliminate single points of failure at the cloud provider level. By deploying the identical static website to two distinct major cloud providers (AWS and Azure) and routing traffic through an independent global edge network (Cloudflare), the system ensures high availability.
 
-This project demonstrates an independent static web hosting solution across three major cloud providers (AWS, Azure, and Google Cloud).
+```mermaid
+graph TD
+    User((End User))
+    CF_Edge[Cloudflare Edge Network]
+    CF_Worker[Cloudflare Worker<br/>Failover Router]
+    
+    AWS_S3[(AWS S3 Bucket<br/>Primary)]
+    Azure_Blob[(Azure Blob Storage<br/>Secondary)]
+    
+    User -->|HTTPS Request| CF_Edge
+    CF_Edge --> CF_Worker
+    
+    CF_Worker -->|1. Primary Fetch| AWS_S3
+    CF_Worker -.->|2. Fallback Fetch| Azure_Blob
+```
 
-**Architecture Flow:**
-User → Static Website → AWS S3
-                         → Azure Blob Storage
-                         → GCP Cloud Storage
+## Component Responsibilities
 
-*Note: These cloud deployments are completely independent. They are not connected to one another, there is no cross-cloud synchronization, and they do not share any backend resources.*
+### 1. Cloudflare Edge (Worker)
+- **Role:** Request Routing & Failover
+- **Responsibility:** Intercepts all incoming client requests and routes them to the configured origins. It executes the failover logic directly at the edge, ensuring minimal latency penalty during a failure event.
+- **Failover Logic:** Passive request-time detection. It attempts to fetch from AWS first. If the fetch throws a network exception or AWS returns a 5xx HTTP status code, it immediately catches the failure and fetches from Azure.
 
-### Core Components
+### 2. AWS S3
+- **Role:** Primary Origin
+- **Responsibility:** Hosts the static website files. Configured for static website hosting with public read access to the specific bucket contents.
 
-1. **Global Routing (Cloudflare DNS)**
-   - Acts as the primary entry point for all incoming user requests.
-   - Configured with active health checks against all storage endpoints.
-   - Utilizes sequential failover routing policies.
+### 3. Azure Blob Storage
+- **Role:** Secondary / Fallback Origin
+- **Responsibility:** Hosts an identical copy of the static website files in the `$web` container. Used only when AWS S3 is unreachable or impaired.
 
-2. **Primary Storage (AWS S3)**
-   - **Service:** Amazon Simple Storage Service (S3)
-   - **Region:** us-east-1 (N. Virginia)
-   - **Role:** Primary Origin. Handles 100% of traffic under normal operating conditions.
-   - **Configuration:** Static website hosting enabled, public read access configured via bucket policy.
+### 4. GitHub Actions
+- **Role:** CI/CD Automation
+- **Responsibility:** Automatically syncs the `master` branch codebase to both AWS S3 and Azure Blob Storage on every push, ensuring both origins serve identical, up-to-date content.
 
-3. **Secondary Storage (Azure Blob Storage)**
-   - **Service:** Azure Storage Accounts (Blob)
-   - **Region:** East US
-   - **Role:** Warm standby. Takes over immediately if AWS health checks fail.
-   - **Configuration:** Blob anonymous read access enabled on a `$web` container.
+## Request Flow
+1. A client initiates an HTTP request to the Cloudflare Worker URL.
+2. The Cloudflare Worker modifies necessary headers and forwards the exact path to the primary origin (AWS).
+3. If AWS returns a client-usable response (2xx, 3xx, 4xx), the Worker relays it directly to the client. Note that 4xx errors (like 404) are treated as legitimate client errors, not infrastructure failures.
+4. If AWS fails (e.g., DNS error, connection timeout, or 503 Service Unavailable), the Worker catches the error and initiates a secondary fetch to Azure Blob Storage.
+5. The Azure response is returned to the client, appended with an `X-Failover: true` header for observability.
 
-4. **Tertiary Storage (Google Cloud Storage)**
-   - **Service:** Cloud Storage
-   - **Region:** us-east4
-   - **Role:** Cold standby / Tertiary failover.
-   - **Configuration:** `StorageObjectViewer` IAM role assigned to `allUsers`.
+## CI/CD Flow
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Git as GitHub Repository
+    participant Action1 as AWS Workflow
+    participant Action2 as Azure Workflow
+    participant S3 as AWS S3
+    participant Blob as Azure Blob
 
-### Deployment & CI/CD Strategy
+    Dev->>Git: Push to master
+    Git->>Action1: Trigger deploy.yml
+    Git->>Action2: Trigger deploy-azure.yml
+    
+    Action1->>Action1: Configure AWS Credentials
+    Action1->>S3: aws s3 sync
+    
+    Action2->>Action2: Configure Azure Credentials
+    Action2->>Blob: az storage blob upload-batch
+```
 
-Code is maintained in a central Git repository. A CI/CD pipeline (e.g., GitHub Actions) is responsible for syncing the built static assets to all three cloud storage locations simultaneously on every push to the `main` branch. This parallel deployment strategy ensures eventual consistency across all environments before traffic routing decisions are made.
+## Failure Scenarios
 
-### Failover Scenario (Simulated in UI)
-
-1. **Healthy State:** All providers are online. Cloudflare resolves the domain to the AWS S3 endpoint.
-2. **Primary Failure:** AWS S3 endpoint experiences an outage or elevated latency.
-3. **Detection:** Cloudflare health checks detect the anomaly and mark the primary origin as degraded.
-4. **First Failover:** Traffic is automatically rerouted to the Azure Blob endpoint without user intervention.
-5. **Secondary Failure:** If Azure also fails, traffic falls back to the tertiary Google Cloud Storage endpoint.
-6. **Recovery:** Once AWS recovers and passes health checks consistently, traffic is automatically routed back to the primary origin.
+| Scenario | System Reaction | Client Experience |
+|----------|-----------------|-------------------|
+| **AWS S3 Bucket Offline / Deleted** | Worker receives 404 (if configured as website) or network error. If network error, fails over to Azure. | Seamless (if network error) or 404 (if origin responds with 404). |
+| **AWS Region Outage** | Worker fetch throws network error or 5xx. Fails over to Azure. | Seamless transition to Azure. |
+| **Azure Storage Outage** | AWS continues to serve traffic normally. | Unaffected. |
+| **Simultaneous Provider Outage** | Both origins fail. Worker returns custom 503. | "503 Service Unavailable" HTML page. |
+| **Missing File (e.g., broken image)** | Both origins lack the file. Worker returns AWS's 404. | Standard 404 Not Found error. |
