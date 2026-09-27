@@ -1,0 +1,36 @@
+name: Deploy to Azure Blob Storage
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy-azure:
+    name: Deploy to Azure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Prepare Deployment Files
+        run: |
+          mkdir -p dist/assets
+          cp index.html dist/
+          cp styles.css dist/
+          cp script.js dist/
+          cp -r assets/* dist/assets/
+
+      - name: Upload to Azure Web Container
+        run: |
+          az storage blob upload-batch \
+            --account-name multicloudstatic8036366b \
+            --destination "\$web" \
+            --source dist \
+            --auth-mode login \
+            --overwrite
