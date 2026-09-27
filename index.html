@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Cloud Static Website | Architecture Demo</title>
+    <meta name="description" content="High-availability static web hosting across AWS, Azure and Google Cloud.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-content">
+            <div class="logo">
+                <img src="assets/logo.svg" alt="Logo" class="logo-icon">
+                <span>Multi-Cloud Architecture</span>
+            </div>
+            <div class="nav-links">
+                <a href="#infrastructure">Infrastructure</a>
+                <a href="#architecture">Architecture</a>
+                <a href="#failover">Simulator</a>
+                <a href="#matrix">Matrix</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- 1. Hero -->
+        <section id="hero" class="hero">
+            <h1>Multi-Cloud Static Website</h1>
+            <p class="subtitle">High-availability static web hosting across AWS, Azure and Google Cloud.</p>
+            
+            <div class="cloud-badges">
+                <div class="badge badge-aws">AWS</div>
+                <div class="badge badge-azure">Azure</div>
+                <div class="badge badge-gcp">Google Cloud</div>
+            </div>
+
+            <div class="hero-actions">
+                <a href="#architecture" class="btn btn-primary">View Architecture</a>
+                <a href="#failover" class="btn btn-secondary">Check Cloud Status</a>
+            </div>
+        </section>
+
+        <!-- 2. Cloud Infrastructure -->
+        <section id="infrastructure" class="section">
+            <h2>Cloud Infrastructure</h2>
+            <div class="grid grid-3">
+                <div class="card provider-card">
+                    <div class="card-header border-aws">
+                        <h3>AWS</h3>
+                        <span class="status-indicator online">Online</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="detail-row"><span>Service:</span> Amazon S3</div>
+                        <div class="detail-row"><span>Role:</span> Primary deployment</div>
+                        <div class="detail-row"><span>Region:</span> us-east-1</div>
+                        <div class="detail-row"><span>Endpoint:</span> <code>aws.demo.local</code></div>
+                    </div>
+                </div>
+
+                <div class="card provider-card">
+                    <div class="card-header border-azure">
+                        <h3>Azure</h3>
+                        <span class="status-indicator online">Online</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="detail-row"><span>Service:</span> Azure Blob Storage</div>
+                        <div class="detail-row"><span>Role:</span> Secondary deployment</div>
+                        <div class="detail-row"><span>Region:</span> East US</div>
+                        <div class="detail-row"><span>Endpoint:</span> <code>azure.demo.local</code></div>
+                    </div>
+                </div>
+
+                <div class="card provider-card">
+                    <div class="card-header border-gcp">
+                        <h3>Google Cloud</h3>
+                        <span class="status-indicator online">Online</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="detail-row"><span>Service:</span> Cloud Storage</div>
+                        <div class="detail-row"><span>Role:</span> Tertiary deployment</div>
+                        <div class="detail-row"><span>Region:</span> us-east4</div>
+                        <div class="detail-row"><span>Endpoint:</span> <code>gcp.demo.local</code></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Architecture -->
+        <section id="architecture" class="section">
+            <h2>Architecture Flow</h2>
+            <div class="architecture-diagram">
+                <div class="node user-node">User Request</div>
+                <div class="flow-arrow">↓</div>
+                <div class="node dns-node">
+                    <strong>Cloudflare DNS / Global Routing</strong>
+                    <div class="routing-logic text-muted"><small>Health Checks & Failover Policies</small></div>
+                </div>
+                <div class="flow-arrow">↓</div>
+                <div class="storage-nodes">
+                    <div class="node storage-node aws-node">AWS S3<br><small>Primary</small></div>
+                    <div class="node storage-node azure-node">Azure Blob Storage<br><small>Secondary</small></div>
+                    <div class="node storage-node gcp-node">Google Cloud Storage<br><small>Tertiary</small></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Failover Demonstration -->
+        <section id="failover" class="section">
+            <div class="section-header">
+                <h2>Cloud Failover Simulator</h2>
+                <span class="tag tag-warning">SIMULATION ONLY</span>
+            </div>
+            <div class="simulator-container card">
+                <div class="status-panel">
+                    <div class="cloud-status" id="status-aws">
+                        <span class="cloud-name">AWS</span>
+                        <span class="status-dot online"></span>
+                        <span class="status-text">ONLINE</span>
+                    </div>
+                    <div class="cloud-status" id="status-azure">
+                        <span class="cloud-name">Azure</span>
+                        <span class="status-dot online"></span>
+                        <span class="status-text">ONLINE</span>
+                    </div>
+                    <div class="cloud-status" id="status-gcp">
+                        <span class="cloud-name">GCP</span>
+                        <span class="status-dot online"></span>
+                        <span class="status-text">ONLINE</span>
+                    </div>
+                </div>
+                
+                <div class="simulator-message" id="simulator-message">
+                    All cloud providers are online. Traffic is routed to the Primary deployment (AWS).
+                </div>
+
+                <div class="simulator-controls">
+                    <button class="btn btn-outline" id="btn-fail-aws">Simulate AWS Failure</button>
+                    <button class="btn btn-outline" id="btn-fail-azure">Simulate Azure Failure</button>
+                    <button class="btn btn-outline" id="btn-fail-gcp">Simulate GCP Failure</button>
+                    <button class="btn btn-primary" id="btn-restore-all">Restore All</button>
+                </div>
+                <div class="routing-path-viz">
+                    Active Route: <code id="active-route">User &rarr; Cloudflare DNS &rarr; AWS S3</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Deployment Matrix -->
+        <section id="matrix" class="section">
+            <h2>Deployment Matrix</h2>
+            <div class="table-container">
+                <table class="data-table" id="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Service</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Region</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="row-aws">
+                            <td>AWS</td>
+                            <td>S3</td>
+                            <td><span class="tag tag-primary">Primary</span></td>
+                            <td class="td-status"><span class="status-indicator online">Online</span></td>
+                            <td>us-east-1</td>
+                        </tr>
+                        <tr id="row-azure">
+                            <td>Azure</td>
+                            <td>Blob Storage</td>
+                            <td><span class="tag tag-secondary">Secondary</span></td>
+                            <td class="td-status"><span class="status-indicator online">Online</span></td>
+                            <td>East US</td>
+                        </tr>
+                        <tr id="row-gcp">
+                            <td>Google Cloud</td>
+                            <td>Cloud Storage</td>
+                            <td><span class="tag tag-tertiary">Tertiary</span></td>
+                            <td class="td-status"><span class="status-indicator online">Online</span></td>
+                            <td>us-east4</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 6. Why Multi-Cloud? -->
+        <section id="why" class="section">
+            <h2>Why Multi-Cloud?</h2>
+            <div class="grid grid-3">
+                <div class="feature-card">
+                    <h4>High Availability</h4>
+                    <p class="text-muted">Ensures maximum uptime by leveraging multiple independent infrastructures.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Fault Tolerance</h4>
+                    <p class="text-muted">System continues operating even if an entire cloud region or provider experiences an outage.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Vendor Portability</h4>
+                    <p class="text-muted">Reduces vendor lock-in by designing architecture that can run on any major cloud platform.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Disaster Recovery</h4>
+                    <p class="text-muted">Built-in failover mechanisms provide automated disaster recovery capabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Distributed Risk</h4>
+                    <p class="text-muted">Reduces dependency on a single provider's SLAs and specific infrastructure vulnerabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Geographic Distribution</h4>
+                    <p class="text-muted">Allows placing workloads closer to end users by combining provider footprints globally.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Project Workflow -->
+        <section id="workflow" class="section">
+            <h2>Project Workflow</h2>
+            <div class="workflow-timeline">
+                <div class="timeline-item">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Develop</div>
+                        <div class="text-muted">Code static assets (HTML/CSS/JS)</div>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Version Control</div>
+                        <div class="text-muted">Commit and push to central Git repository</div>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Build</div>
+                        <div class="text-muted">CI/CD pipeline triggers on push (e.g., GitHub Actions)</div>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-num">4</div>
+                    <div class="step-content">
+                        <div class="step-title">Deploy</div>
+                        <div class="text-muted">Sync assets to AWS S3, Azure Blob, and GCP Cloud Storage in parallel</div>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-num">5</div>
+                    <div class="step-content">
+                        <div class="step-title">Health Monitoring</div>
+                        <div class="text-muted">Cloudflare DNS actively pings origins for availability</div>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-num">6</div>
+                    <div class="step-content">
+                        <div class="step-title">Failover</div>
+                        <div class="text-muted">Automatic DNS rerouting upon endpoint failure detection</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-content">
+            <div>
+                <strong>Cloud Computing Mini Project</strong><br>
+                <span class="text-muted">Multi-Cloud Static Website</span>
+            </div>
+            <div class="text-right text-muted">
+                &copy; <span id="current-year"></span> Academic Project. No real cloud resources were harmed.
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

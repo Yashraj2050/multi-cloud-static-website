@@ -1,0 +1,10 @@
+name = "multicloud-failover-router"
+main = "src/worker.js"
+compatibility_date = "2024-09-25"
+
+# The Worker is deployed to workers.dev by default (no custom domain required)
+# Endpoint: https://multicloud-failover-router.<account-subdomain>.workers.dev
+
+[vars]
+AWS_ORIGIN = "http://multicloud-static-site-1790490640-406d7816.s3-website.ap-south-1.amazonaws.com"
+AZURE_ORIGIN = "http://multicloudstatic8036366b.z58.web.core.windows.net"

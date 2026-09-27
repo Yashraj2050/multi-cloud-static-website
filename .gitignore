@@ -1,0 +1,33 @@
+# System files
+.DS_Store
+Thumbs.db
+*.log
+.AppleDouble
+.LSOverride
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+.Trash-1000
+
+# Other ignored files
+node_modules/
+dist/
+build/
+
+# Secrets and credentials
+.env
+.env.*
+credentials
+*.pem
+*.key
+*.p12
+.wrangler/
+wrangler.toml.local
